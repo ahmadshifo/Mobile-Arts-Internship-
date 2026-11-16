@@ -19,11 +19,29 @@ import {
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchServices } from "@/store/slices/servicesSlice";
 import {
-  selectServices,
+  selectFilteredServices,
+  selectHasActiveFilters,
+  selectOperator,
+  selectSearch,
   selectServicesHasLoaded,
   selectServicesRequest,
   selectServicesSummary,
 } from "@/store/selectors/servicesSelectors";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { SERVICE_OPERATORS } from "@/lib/constants/service";
+import {
+  resetFilters,
+  setOperator,
+  setSearch,
+} from "@/store/slices/filtersSlice";
 
 const serviceTints = [
   "bg-teal-100 text-teal-800",
@@ -36,7 +54,10 @@ const serviceTints = [
 export default function ServicesPage() {
   const dispatch = useAppDispatch();
 
-  const services = useAppSelector(selectServices);
+  const services = useAppSelector(selectFilteredServices);
+  const search = useAppSelector(selectSearch);
+  const operator = useAppSelector(selectOperator);
+  const hasActiveFilters = useAppSelector(selectHasActiveFilters);
   const { loading, error } = useAppSelector(selectServicesRequest);
   const hasLoaded = useAppSelector(selectServicesHasLoaded);
   const summary = useAppSelector(selectServicesSummary);
@@ -66,6 +87,57 @@ export default function ServicesPage() {
       />
 
       <main className="space-y-5 px-4 py-7 sm:px-8">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
+            <div className="flex-1 space-y-2">
+                <Label htmlFor="service-search">Search services</Label>
+
+                <Input
+                    id="service-search"
+                    type="search"
+                    placeholder="Search by name or provider..."
+                    value={search}
+                    onChange={(event) => dispatch(setSearch(event.target.value))}
+                    className="bg-card"
+                />
+            </div>
+
+            <div className="space-y-2 sm:w-56">
+                <Label htmlFor="operator-filter">Operator</Label>
+
+                <Select
+                    value={operator}
+                    onValueChange={(value) =>
+                        dispatch(setOperator(value as typeof operator))
+                    }
+                >
+                <SelectTrigger
+                    id="operator-filter"
+                    className="w-full bg-card"
+                >
+                    <SelectValue placeholder="All operators" />
+                </SelectTrigger>
+
+                <SelectContent>
+                    <SelectItem value="all">All operators</SelectItem>
+
+                    {SERVICE_OPERATORS.map((operatorName) => (
+                        <SelectItem key={operatorName} value={operatorName}>
+                            {operatorName}
+                        </SelectItem>
+                     ))}
+                    </SelectContent>
+                </Select>
+            </div>
+
+            <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => dispatch(resetFilters())}
+                    disabled={search === "" && operator === "all"}
+                >
+                    Clear filters
+                </Button>
+            </div>
         {error ? (
           <Card className="border-red-200">
             <CardContent className="space-y-4 p-6">
@@ -138,17 +210,35 @@ export default function ServicesPage() {
                     ))
                   ) : services.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="h-48 text-center">
-                        <p className="font-semibold">No services yet</p>
+                        <TableCell colSpan={8} className="h-48 text-center">
+                            <div className="flex flex-col items-center gap-3 py-6">
+                                <p className="font-semibold text-foreground">
+                                    {hasActiveFilters
+                                    ? "No matching services"
+                                    : "No services yet"}
+                                </p>
 
-                        <p className="mt-1 text-sm text-muted-foreground">
-                          Create your first service to get started.
-                        </p>
+                                <p className="text-sm text-muted-foreground">
+                                    {hasActiveFilters
+                                    ? "Try another search or clear your filters."
+                                    : "Create your first service to get started."}
+                                </p>
 
-                        <Button asChild className="mt-4">
-                          <Link href="/services/new">Create service</Link>
-                        </Button>
-                      </TableCell>
+                                {hasActiveFilters ? (
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() => dispatch(resetFilters())}
+                                    >
+                                        Clear filters
+                                    </Button>
+                                ) : (
+                                    <Button asChild>
+                                        <Link href="/services/new">Create service</Link>
+                                    </Button>
+                                )}
+                            </div>
+                        </TableCell>
                     </TableRow>
                   ) : (
                     services.map((service) => (

@@ -18,14 +18,12 @@ const filtersSlice = createSlice({
     setSearch(state, action: PayloadAction<string>) {
       state.search = action.payload;
     },
-
     setOperator(
       state,
       action: PayloadAction<FiltersState["operator"]>,
     ) {
       state.operator = action.payload;
     },
-
     resetFilters() {
       return initialState;
     },

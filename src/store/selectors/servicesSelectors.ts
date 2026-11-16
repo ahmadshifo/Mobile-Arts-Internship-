@@ -17,3 +17,32 @@ export const selectServicesSummary = createSelector(
     active: services.filter((service) => service.status === "Active").length,
   }),
 );
+export const selectSearch = (state: RootState) =>
+  state.filters.search;
+
+export const selectOperator = (state: RootState) =>
+  state.filters.operator;
+
+export const selectHasActiveFilters = createSelector(
+  [selectSearch, selectOperator],
+  (search, operator) =>
+    search.trim().length > 0 || operator !== "all",
+);
+
+export const selectFilteredServices = createSelector(
+  [selectServices, selectSearch, selectOperator],
+  (services, search, operator) => {
+    const normalizedSearch = search.trim().toLowerCase();
+
+    return services.filter((service) => {
+      const matchesSearch =
+        service.name.toLowerCase().includes(normalizedSearch) ||
+        service.provider.toLowerCase().includes(normalizedSearch);
+
+      const matchesOperator =
+        operator === "all" || service.operator === operator;
+
+      return matchesSearch && matchesOperator;
+    });
+  },
+);
