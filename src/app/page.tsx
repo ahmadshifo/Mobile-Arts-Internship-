@@ -1,3 +1,6 @@
+"use client";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { setSearch } from "@/store/slices/filtersSlice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -8,6 +11,9 @@ import {
 } from "@/components/ui/card";
 
 export default function Home() {
+  const dispatch = useAppDispatch();
+
+  const search = useAppSelector((state) => state.filters.search);
   return (
     <main className="min-h-screen p-6">
       <div className="mx-auto max-w-xl space-y-6">
@@ -25,15 +31,21 @@ export default function Home() {
 
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <label htmlFor="service-name" className="text-sm font-medium">
-                Service name
+              <label htmlFor="service-search" className="text-sm font-medium">
+                 Search text — Redux check
               </label>
 
               <Input
-                id="service-name"
-                placeholder="Enter a service name"
+                id="service-search"
+                placeholder="Type CloudPlay"
+                value={search}
+                onChange={(event) => dispatch(setSearch(event.target.value))}
               />
-            </div>
+
+              <p className="text-sm text-muted-foreground">
+                Stored in Redux: {search || "(empty)"}
+              </p>
+          </div>
 
             <Button type="button">Create service</Button>
           </CardContent>
