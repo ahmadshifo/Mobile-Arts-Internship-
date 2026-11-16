@@ -1,32 +1,23 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Pencil, Plus, Trash2 } from "lucide-react";
+
 import PageHeader from "@/components/layout/PageHeader";
-import { Badge } from "@/components/ui/badge";
+import { StatusSwitch } from "@/components/services/StatusSwitch";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { fetchServices } from "@/store/slices/servicesSlice";
-import {
-  selectFilteredServices,
-  selectHasActiveFilters,
-  selectOperator,
-  selectSearch,
-  selectServicesHasLoaded,
-  selectServicesRequest,
-  selectServicesSummary,
-} from "@/store/selectors/servicesSelectors";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -36,12 +27,40 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+
 import { SERVICE_OPERATORS } from "@/lib/constants/service";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import {
+  selectDeleteRequest,
+  selectFilteredServices,
+  selectHasActiveFilters,
+  selectOperator,
+  selectSearch,
+  selectServiceRequests,
+  selectServicesHasLoaded,
+  selectServicesRequest,
+  selectServicesSummary,
+} from "@/store/selectors/servicesSelectors";
 import {
   resetFilters,
   setOperator,
   setSearch,
 } from "@/store/slices/filtersSlice";
+import {
+  clearDeleteError,
+  deleteService,
+  fetchServices,
+} from "@/store/slices/servicesSlice";
+import type { Service } from "@/types/service";
 
 const serviceTints = [
   "bg-teal-100 text-teal-800",
@@ -61,12 +80,39 @@ export default function ServicesPage() {
   const { loading, error } = useAppSelector(selectServicesRequest);
   const hasLoaded = useAppSelector(selectServicesHasLoaded);
   const summary = useAppSelector(selectServicesSummary);
+  const requests = useAppSelector(selectServiceRequests);
+
+  const [serviceToDelete, setServiceToDelete] =
+    useState<Service | null>(null);
+
+  const deleteRequest = useAppSelector((state) =>
+    selectDeleteRequest(state, serviceToDelete?.id ?? null),
+  );
+
+  const isDeleting = deleteRequest?.loading ?? false;
+  const deleteError = deleteRequest?.error;
+  const showSkeleton = loading || (!hasLoaded && !error);
 
   useEffect(() => {
     void dispatch(fetchServices());
   }, [dispatch]);
 
-  const showSkeleton = loading || (!hasLoaded && !error);
+  function openDeleteDialog(service: Service) {
+    dispatch(clearDeleteError(service.id));
+    setServiceToDelete(service);
+  }
+
+  async function handleDelete() {
+    if (!serviceToDelete || isDeleting) {
+      return;
+    }
+
+    const result = await dispatch(deleteService(serviceToDelete.id));
+
+    if (deleteService.fulfilled.match(result)) {
+      setServiceToDelete(null);
+    }
+  }
 
   return (
     <>
@@ -88,56 +134,59 @@ export default function ServicesPage() {
 
       <main className="space-y-5 px-4 py-7 sm:px-8">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
-            <div className="flex-1 space-y-2">
-                <Label htmlFor="service-search">Search services</Label>
+          <div className="flex-1 space-y-2">
+            <Label htmlFor="service-search">Search services</Label>
 
-                <Input
-                    id="service-search"
-                    type="search"
-                    placeholder="Search by name or provider..."
-                    value={search}
-                    onChange={(event) => dispatch(setSearch(event.target.value))}
-                    className="bg-card"
-                />
-            </div>
+            <Input
+              id="service-search"
+              type="search"
+              placeholder="Search by name or provider..."
+              value={search}
+              onChange={(event) =>
+                dispatch(setSearch(event.target.value))
+              }
+              className="bg-card"
+            />
+          </div>
 
-            <div className="space-y-2 sm:w-56">
-                <Label htmlFor="operator-filter">Operator</Label>
+          <div className="space-y-2 sm:w-56">
+            <Label htmlFor="operator-filter">Operator</Label>
 
-                <Select
-                    value={operator}
-                    onValueChange={(value) =>
-                        dispatch(setOperator(value as typeof operator))
-                    }
-                >
-                <SelectTrigger
-                    id="operator-filter"
-                    className="w-full bg-card"
-                >
-                    <SelectValue placeholder="All operators" />
-                </SelectTrigger>
+            <Select
+              value={operator}
+              onValueChange={(value) =>
+                dispatch(setOperator(value as typeof operator))
+              }
+            >
+              <SelectTrigger
+                id="operator-filter"
+                className="w-full bg-card"
+              >
+                <SelectValue placeholder="All operators" />
+              </SelectTrigger>
 
-                <SelectContent>
-                    <SelectItem value="all">All operators</SelectItem>
+              <SelectContent>
+                <SelectItem value="all">All operators</SelectItem>
 
-                    {SERVICE_OPERATORS.map((operatorName) => (
-                        <SelectItem key={operatorName} value={operatorName}>
-                            {operatorName}
-                        </SelectItem>
-                     ))}
-                    </SelectContent>
-                </Select>
-            </div>
+                {SERVICE_OPERATORS.map((operatorName) => (
+                  <SelectItem key={operatorName} value={operatorName}>
+                    {operatorName}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-            <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => dispatch(resetFilters())}
-                    disabled={search === "" && operator === "all"}
-                >
-                    Clear filters
-                </Button>
-            </div>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => dispatch(resetFilters())}
+            disabled={search === "" && operator === "all"}
+          >
+            Clear filters
+          </Button>
+        </div>
+
         {error ? (
           <Card className="border-red-200">
             <CardContent className="space-y-4 p-6">
@@ -164,7 +213,10 @@ export default function ServicesPage() {
             {showSkeleton ? (
               <Skeleton className="h-5 w-44" />
             ) : (
-              <p className="text-sm text-muted-foreground" aria-live="polite">
+              <p
+                className="text-sm text-muted-foreground"
+                aria-live="polite"
+              >
                 {summary.total} services · {summary.active} active
               </p>
             )}
@@ -202,7 +254,10 @@ export default function ServicesPage() {
                     Array.from({ length: 5 }, (_, rowIndex) => (
                       <TableRow key={rowIndex}>
                         {Array.from({ length: 8 }, (_, columnIndex) => (
-                          <TableCell key={columnIndex} className="px-5 py-5">
+                          <TableCell
+                            key={columnIndex}
+                            className="px-5 py-5"
+                          >
                             <Skeleton className="h-5 w-full min-w-12" />
                           </TableCell>
                         ))}
@@ -210,35 +265,37 @@ export default function ServicesPage() {
                     ))
                   ) : services.length === 0 ? (
                     <TableRow>
-                        <TableCell colSpan={8} className="h-48 text-center">
-                            <div className="flex flex-col items-center gap-3 py-6">
-                                <p className="font-semibold text-foreground">
-                                    {hasActiveFilters
-                                    ? "No matching services"
-                                    : "No services yet"}
-                                </p>
+                      <TableCell colSpan={8} className="h-48 text-center">
+                        <div className="flex flex-col items-center gap-3 py-6">
+                          <p className="font-semibold text-foreground">
+                            {hasActiveFilters
+                              ? "No matching services"
+                              : "No services yet"}
+                          </p>
 
-                                <p className="text-sm text-muted-foreground">
-                                    {hasActiveFilters
-                                    ? "Try another search or clear your filters."
-                                    : "Create your first service to get started."}
-                                </p>
+                          <p className="text-sm text-muted-foreground">
+                            {hasActiveFilters
+                              ? "Try another search or clear your filters."
+                              : "Create your first service to get started."}
+                          </p>
 
-                                {hasActiveFilters ? (
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        onClick={() => dispatch(resetFilters())}
-                                    >
-                                        Clear filters
-                                    </Button>
-                                ) : (
-                                    <Button asChild>
-                                        <Link href="/services/new">Create service</Link>
-                                    </Button>
-                                )}
-                            </div>
-                        </TableCell>
+                          {hasActiveFilters ? (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => dispatch(resetFilters())}
+                            >
+                              Clear filters
+                            </Button>
+                          ) : (
+                            <Button asChild>
+                              <Link href="/services/new">
+                                Create service
+                              </Link>
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ) : (
                     services.map((service) => (
@@ -292,16 +349,7 @@ export default function ServicesPage() {
                         </TableCell>
 
                         <TableCell className="pl-5">
-                          <Badge
-                            variant="secondary"
-                            className={
-                              service.status === "Active"
-                                ? "bg-teal-100 text-teal-800"
-                                : "bg-slate-200 text-slate-700"
-                            }
-                          >
-                            {service.status}
-                          </Badge>
+                          <StatusSwitch service={service} />
                         </TableCell>
 
                         <TableCell className="px-5">
@@ -313,17 +361,35 @@ export default function ServicesPage() {
                               disabled
                               aria-label={`Edit ${service.name}`}
                             >
-                              <Pencil className="size-4" aria-hidden="true" />
+                              <Pencil
+                                className="size-4"
+                                aria-hidden="true"
+                              />
                             </Button>
 
                             <Button
                               type="button"
                               variant="ghost"
                               size="icon"
-                              disabled
                               aria-label={`Delete ${service.name}`}
+                              disabled={
+                                Boolean(
+                                  requests.deleteService[service.id]
+                                    ?.loading,
+                                ) ||
+                                Boolean(
+                                  requests.toggleServiceStatus[
+                                    service.id
+                                  ]?.loading,
+                                )
+                              }
+                              onClick={() => openDeleteDialog(service)}
+                              className="text-muted-foreground hover:bg-red-50 hover:text-red-700"
                             >
-                              <Trash2 className="size-4" aria-hidden="true" />
+                              <Trash2
+                                className="size-4"
+                                aria-hidden="true"
+                              />
                             </Button>
                           </div>
                         </TableCell>
@@ -335,6 +401,60 @@ export default function ServicesPage() {
             </div>
           </>
         )}
+
+        <AlertDialog
+          open={serviceToDelete !== null}
+          onOpenChange={(open) => {
+            if (!open && !isDeleting) {
+              setServiceToDelete(null);
+            }
+          }}
+        >
+          <AlertDialogContent
+            onCloseAutoFocus={(event) => {
+              event.preventDefault();
+              document.getElementById("service-search")?.focus();
+            }}
+          >
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete service?</AlertDialogTitle>
+
+              <AlertDialogDescription>
+                This will permanently delete{" "}
+                <span className="font-semibold">
+                  {serviceToDelete?.name}
+                </span>
+                . This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+
+            {deleteError && (
+              <p
+                role="alert"
+                className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700"
+              >
+                {deleteError}
+              </p>
+            )}
+
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isDeleting}>
+                Cancel
+              </AlertDialogCancel>
+
+              <AlertDialogAction
+                disabled={isDeleting}
+                className="bg-destructive text-white hover:bg-destructive/90"
+                onClick={(event) => {
+                  event.preventDefault();
+                  void handleDelete();
+                }}
+              >
+                {isDeleting ? "Deleting..." : "Delete service"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </main>
     </>
   );

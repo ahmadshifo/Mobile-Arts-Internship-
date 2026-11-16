@@ -46,3 +46,22 @@ export const selectFilteredServices = createSelector(
     });
   },
 );
+export const selectServiceIsBusy = (
+  state: RootState,
+  id: number,
+) =>
+  Boolean(
+    state.services.requests.toggleServiceStatus[id]?.loading ||
+      state.services.requests.deleteService[id]?.loading,
+  );
+
+export const selectDeleteRequest = (
+  state: RootState,
+  id: number | null,
+) =>
+  id === null
+    ? undefined
+    : state.services.requests.deleteService[id];
+
+export const selectServiceRequests = (state: RootState) =>
+  state.services.requests;
