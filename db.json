@@ -89,6 +89,24 @@
       "status": "Paused",
       "subscribers": 725,
       "createdAt": "2026-09-15T00:00:00.000Z"
+    },
+    {
+      "name": "GameZone",
+      "provider": "Play Studio",
+      "category": "Games",
+      "description": "mobile games when getting board",
+      "operator": "Cedar Mobile",
+      "price": 1.98,
+      "cycle": "Weekly",
+      "trialDays": 1,
+      "keyword": "GAMES",
+      "shortcode": "6789",
+      "notificationUrl": "https://share.google/kaDXbWlYDUJV04wJq",
+      "sendWelcomeSms": true,
+      "status": "Active",
+      "subscribers": 0,
+      "createdAt": "2026-11-17T09:19:50.294Z",
+      "id": 6
     }
   ]
 }
