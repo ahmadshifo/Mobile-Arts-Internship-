@@ -6,8 +6,14 @@ import {
 import {
   getServices,
   patchServiceStatus,
+  postService,
   removeService,
 } from "@/lib/api/services";
+import {
+  serviceSchema,
+  type ServiceFormValues,
+} from "@/lib/validation/service";
+import { resetFilters } from "@/store/slices/filtersSlice";
 import { addToast } from "@/store/slices/uiSlice";
 import type { Service } from "@/types/service";
 import type { RequestState } from "@/types/request";
@@ -173,6 +179,60 @@ export const deleteService = createAsyncThunk<
   },
 );
 
+export const createService = createAsyncThunk<
+  Service,
+  ServiceFormValues,
+  ServiceThunkConfig
+>(
+  "services/createService",
+  async (values, { dispatch, rejectWithValue }) => {
+    try {
+      const validation = serviceSchema.safeParse(values);
+
+      if (!validation.success) {
+        throw new Error("Please correct the service details.");
+      }
+
+      const newService: Omit<Service, "id"> = {
+        ...validation.data,
+        subscribers: 0,
+        createdAt: new Date().toISOString(),
+      };
+
+      const savedService = await postService(newService);
+
+      dispatch(resetFilters());
+
+      dispatch(
+        addToast({
+          type: "success",
+          message: "Service created",
+        }),
+      );
+
+      return savedService;
+    } catch (error) {
+      const message = getRequestError(
+        error,
+        "Unable to create service.",
+      );
+
+      dispatch(
+        addToast({
+          type: "error",
+          message,
+        }),
+      );
+
+      return rejectWithValue(message);
+    }
+  },
+  {
+    condition: (_, { getState }) =>
+      !getState().services.requests.createService.loading,
+  },
+);
+
 const servicesSlice = createSlice({
   name: "services",
   initialState,
@@ -186,6 +246,28 @@ const servicesSlice = createSlice({
         },
     },
   extraReducers: (builder) => {
+    builder
+    .addCase(createService.pending, (state) => {
+        state.requests.createService = {
+        loading: true,
+        error: null,
+        };
+    })
+    .addCase(createService.fulfilled, (state, action) => {
+        state.items.push(action.payload);
+
+        state.requests.createService = {
+        loading: false,
+        error: null,
+        };
+    })
+    .addCase(createService.rejected, (state, action) => {
+        state.requests.createService = {
+        loading: false,
+        error: action.payload ?? "Unable to create service.",
+        };
+    });
+
     builder
       .addCase(fetchServices.pending, (state) => {
         state.requests.fetchServices.loading = true;

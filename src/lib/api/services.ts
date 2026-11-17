@@ -68,3 +68,28 @@ export async function removeService(id: number): Promise<void> {
     );
   }
 }
+export async function postService(
+  data: Omit<Service, "id">,
+): Promise<Service> {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+
+  if (!apiUrl) {
+    throw new Error("The API URL is missing. Check .env.local.");
+  }
+
+  const response = await fetch(`${apiUrl}/services`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      `Unable to create service. Server returned ${response.status}.`,
+    );
+  }
+
+  return response.json();
+}
