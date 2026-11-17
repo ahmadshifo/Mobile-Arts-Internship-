@@ -355,16 +355,16 @@ export default function ServicesPage() {
                         <TableCell className="px-5">
                           <div className="flex justify-end gap-1">
                             <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              disabled
-                              aria-label={`Edit ${service.name}`}
+                                asChild
+                                variant="ghost"
+                                size="icon"
                             >
-                              <Pencil
-                                className="size-4"
-                                aria-hidden="true"
-                              />
+                            <Link
+                                href={`/services/${service.id}/edit`}
+                                aria-label={`Edit ${service.name}`}
+                            >
+                                    <Pencil className="size-4" aria-hidden="true" />
+                                </Link>
                             </Button>
 
                             <Button

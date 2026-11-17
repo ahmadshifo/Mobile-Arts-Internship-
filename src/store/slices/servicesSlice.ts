@@ -4,9 +4,11 @@ import {
   type PayloadAction,
 } from "@reduxjs/toolkit";
 import {
+  getServiceById,
   getServices,
   patchServiceStatus,
   postService,
+  putService,
   removeService,
 } from "@/lib/api/services";
 import {
@@ -21,6 +23,8 @@ import type { RequestState } from "@/types/request";
 type ServicesState = {
   items: Service[];
   selectedService: Service | null;
+  detailsId: number | null;
+  detailsRequestId: string | null;
   hasLoaded: boolean;
   requests: {
     fetchServices: RequestState;
@@ -35,6 +39,8 @@ type ServicesState = {
 const initialState: ServicesState = {
   items: [],
   selectedService: null,
+  detailsId: null,
+  detailsRequestId: null,
   hasLoaded: false,
   requests: {
     fetchServices: { loading: false, error: null },
@@ -233,6 +239,84 @@ export const createService = createAsyncThunk<
   },
 );
 
+export const fetchServiceById = createAsyncThunk<
+  Service | null,
+  number,
+  ServiceThunkConfig
+>(
+  "services/fetchServiceById",
+  async (id, { signal, rejectWithValue }) => {
+    try {
+      return await getServiceById(id, signal);
+    } catch (error) {
+      return rejectWithValue(
+        getRequestError(error, "Unable to load service."),
+      );
+    }
+  },
+);
+
+export const updateService = createAsyncThunk<
+  Service,
+  { id: number; values: ServiceFormValues },
+  ServiceThunkConfig
+>(
+  "services/updateService",
+  async ({ id, values }, { dispatch, rejectWithValue }) => {
+    try {
+      const validation = serviceSchema.safeParse(values);
+
+      if (!validation.success) {
+        throw new Error("Please correct the service details.");
+      }
+
+      const existingService = await getServiceById(id);
+
+      if (!existingService) {
+        throw new Error("This service no longer exists.");
+      }
+
+      const updatedService: Service = {
+        ...existingService,
+        ...validation.data,
+        description: validation.data.description ?? "",
+        id,
+      };
+
+      const savedService = await putService(id, updatedService);
+
+      dispatch(
+        addToast({
+          type: "success",
+          message: "Service updated",
+        }),
+      );
+
+      return savedService;
+    } catch (error) {
+      const message = getRequestError(
+        error,
+        "Unable to update service.",
+      );
+
+      dispatch(addToast({ type: "error", message }));
+
+      return rejectWithValue(message);
+    }
+  },
+  {
+    condition: ({ id }, { getState }) => {
+      const requests = getState().services.requests;
+
+      return (
+        !requests.updateService.loading &&
+        !requests.deleteService[id]?.loading &&
+        !requests.toggleServiceStatus[id]?.loading
+      );
+    },
+  },
+);
+
 const servicesSlice = createSlice({
   name: "services",
   initialState,
@@ -247,26 +331,93 @@ const servicesSlice = createSlice({
     },
   extraReducers: (builder) => {
     builder
-    .addCase(createService.pending, (state) => {
+      .addCase(fetchServiceById.pending, (state, action) => {
+        state.selectedService = null;
+        state.detailsId = action.meta.arg;
+        state.detailsRequestId = action.meta.requestId;
+
+        state.requests.fetchServiceById = {
+        loading: true,
+        error: null,
+        };
+      })
+      .addCase(fetchServiceById.fulfilled, (state, action) => {
+        if (state.detailsRequestId !== action.meta.requestId) {
+        return;
+        }
+
+        state.selectedService = action.payload;
+
+        state.requests.fetchServiceById = {
+        loading: false,
+        error: null,
+        };
+      })
+      .addCase(fetchServiceById.rejected, (state, action) => {
+        if (state.detailsRequestId !== action.meta.requestId) {
+        return;
+        }
+
+        state.requests.fetchServiceById = {
+        loading: false,
+        error: action.meta.aborted
+            ? null
+            : action.payload ?? "Unable to load service.",
+        };
+      })
+      .addCase(updateService.pending, (state) => {
+        state.requests.updateService = {
+        loading: true,
+        error: null,
+        };
+      })
+      .addCase(updateService.fulfilled, (state, action) => {
+        const savedService = action.payload;
+
+        const index = state.items.findIndex(
+        (service) => service.id === savedService.id,
+        );
+
+        if (index !== -1) {
+        state.items[index] = savedService;
+        }
+
+        if (state.detailsId === savedService.id) {
+        state.selectedService = savedService;
+        }
+
+        state.requests.updateService = {
+        loading: false,
+        error: null,
+        };
+      })
+      .addCase(updateService.rejected, (state, action) => {
+        state.requests.updateService = {
+        loading: false,
+        error: action.payload ?? "Unable to update service.",
+        };
+      });
+    builder
+      .addCase(createService.pending, (state) => {
         state.requests.createService = {
         loading: true,
         error: null,
         };
-    })
-    .addCase(createService.fulfilled, (state, action) => {
+      })
+      .addCase(createService.fulfilled, (state, action) => {
         state.items.push(action.payload);
 
         state.requests.createService = {
         loading: false,
         error: null,
         };
-    })
-    .addCase(createService.rejected, (state, action) => {
+      })
+      .addCase(createService.rejected, (state, action) => {
         state.requests.createService = {
         loading: false,
         error: action.payload ?? "Unable to create service.",
         };
-    });
+      });
 
     builder
       .addCase(fetchServices.pending, (state) => {

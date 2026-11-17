@@ -1,5 +1,6 @@
 import { createSelector } from "@reduxjs/toolkit";
 import type { RootState } from "@/store/store";
+import type { ServiceFormValues } from "@/lib/validation/service";
 
 export const selectServices = (state: RootState) =>
   state.services.items;
@@ -65,3 +66,40 @@ export const selectDeleteRequest = (
 
 export const selectServiceRequests = (state: RootState) =>
   state.services.requests;
+
+export const selectSelectedService = (state: RootState) =>
+  state.services.selectedService;
+
+export const selectServiceDetailsId = (state: RootState) =>
+  state.services.detailsId;
+
+export const selectServiceDetailsRequest = (state: RootState) =>
+  state.services.requests.fetchServiceById;
+
+export const selectUpdateServiceRequest = (state: RootState) =>
+  state.services.requests.updateService;
+
+export const selectSelectedServiceFormValues = createSelector(
+  [selectSelectedService],
+  (service): ServiceFormValues | null => {
+    if (!service) {
+      return null;
+    }
+
+    return {
+      name: service.name,
+      provider: service.provider,
+      category: service.category,
+      description: service.description ?? "",
+      operator: service.operator,
+      price: service.price,
+      cycle: service.cycle,
+      trialDays: service.trialDays,
+      keyword: service.keyword,
+      shortcode: service.shortcode,
+      notificationUrl: service.notificationUrl,
+      sendWelcomeSms: service.sendWelcomeSms,
+      status: service.status,
+    };
+  },
+);

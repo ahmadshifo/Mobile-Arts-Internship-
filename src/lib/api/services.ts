@@ -93,3 +93,58 @@ export async function postService(
 
   return response.json();
 }
+
+export async function getServiceById(
+  id: number,
+  signal?: AbortSignal,
+): Promise<Service | null> {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+
+  if (!apiUrl) {
+    throw new Error("The API URL is missing. Check .env.local.");
+  }
+
+  const response = await fetch(`${apiUrl}/services/${id}`, {
+    signal,
+    cache: "no-store",
+  });
+
+  if (response.status === 404) {
+    return null;
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      `Unable to load service. Server returned ${response.status}.`,
+    );
+  }
+
+  return response.json();
+}
+
+export async function putService(
+  id: number,
+  data: Service,
+): Promise<Service> {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+
+  if (!apiUrl) {
+    throw new Error("The API URL is missing. Check .env.local.");
+  }
+
+  const response = await fetch(`${apiUrl}/services/${id}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      `Unable to update service. Server returned ${response.status}.`,
+    );
+  }
+
+  return response.json();
+}
