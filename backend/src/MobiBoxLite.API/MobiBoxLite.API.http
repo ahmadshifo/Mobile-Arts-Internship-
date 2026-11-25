@@ -1,0 +1,6 @@
+@MobiBoxLite.API_HostAddress = http://localhost:5284
+
+GET {{MobiBoxLite.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
