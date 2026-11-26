@@ -1,3 +1,9 @@
+## EF Core and MySQL versions
+
+The backend targets .NET 10 LTS. This internship build uses Pomelo 9.0.0 with EF Core 9.0.23 and the local `dotnet-ef` 9.0.23 tool. Pomelo 9.0.0 targets EF Core 9, whose Microsoft support ended on November 10, 2026.
+
+The API reads the local MySQL connection from `ConnectionStrings:MobiBox` in development user secrets. Use `mobibox_lite` as the database name.
+
 ## BE-02 · Services database design
 
 Both BE-02 design decisions were recorded on 24 November 2026.
